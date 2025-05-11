@@ -1,0 +1,38 @@
+{
+  "default": {
+    "steps/api.step.ts": {
+      "x": 415.92934969531507,
+      "y": 179.45307586511365
+    },
+    "steps/noop.step.ts": {
+      "x": 592.8801194374963,
+      "y": -112.26999445990188
+    },
+    "steps/one.step.ts": {
+      "x": 80.5,
+      "y": 256
+    },
+    "steps/two.step.ts": {
+      "x": 70.5,
+      "y": 432
+    },
+    "steps/notes.step.py": {
+      "x": 763.3111458390817,
+      "y": 585.8944443215055
+    },
+    "steps/api.step.py": {
+      "x": 868.0081537177931,
+      "y": 236.87485962203846
+    },
+    "steps/notes_docx_gen.step.py": {
+      "x": 220,
+      "y": 548
+    }
+  },
+  "openai": {
+    "steps/notes.step.py": {
+      "x": 0,
+      "y": 0
+    }
+  }
+}
