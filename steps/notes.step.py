@@ -224,8 +224,11 @@ class LessonNotesData(BaseModel):
     week: str
     custom_instructions: str = None
 
+
 class InputModel(BaseModel):
     lesson_notes: LessonNotesData | Dict[str, Any] | Any  # Allow flexibility for namespace or dict
+    phone_number: str
+
 
 # Motia configuration
 config = {
@@ -330,7 +333,7 @@ async def handler(input: Any, context: Any) -> Dict[str, Any]:
     # Emit lesson note
     await context.emit({
         "topic": "openai-response",
-        "data":{ "lesson_note": lesson_note},
+        "data":{ "lesson_note": lesson_note, "user_phone": validated_input.phone_number},
     })
 
     return {
