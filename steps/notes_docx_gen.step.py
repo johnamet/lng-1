@@ -34,7 +34,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Directory to serve files from
-UPLOAD_FOLDER = 'files'
+UPLOAD_FOLDER = 'generated_files'
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
