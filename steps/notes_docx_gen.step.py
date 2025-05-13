@@ -2,16 +2,14 @@
 """
 Module to generate lesson notes template for Morning Star School
 """
-# Standard library imports
 import os
 import re
 import logging
-from typing import Dict, Any
 import tempfile
-import matplotlib.pyplot as plt
-import matplotlib
+from typing import Dict, Any
 
-# Third-party imports
+import matplotlib
+import matplotlib.pyplot as plt
 import warnings
 from pydantic import BaseModel
 from docx import Document
@@ -24,11 +22,13 @@ from markdown2 import markdown
 from bs4 import BeautifulSoup
 
 # Suppress deprecated style_id warning
-warnings.filterwarnings("ignore", category=UserWarning, module="docx.styles.styles")
+warnings.filterwarnings(
+    "ignore", category=UserWarning, module="docx.styles.styles"
+)
 
 # Configure logging
 logging.basicConfig(
-    level=logging.DEBUG,  # Detailed logging for LaTeX parsing
+    level=logging.DEBUG,
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
@@ -38,11 +38,8 @@ UPLOAD_FOLDER = 'generated_files'
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
-# Helper functions for DOCX formatting
+
 def set_cell_text(cell, text, bold=False, font_size=12, align='center'):
-    """
-    Helper to insert styled text into a cell
-    """
     cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
     p = cell.paragraphs[0]
     p.alignment = getattr(WD_ALIGN_PARAGRAPH, align.upper())
@@ -52,29 +49,23 @@ def set_cell_text(cell, text, bold=False, font_size=12, align='center'):
     run.bold = bold
     run._element.rPr.rFonts.set(qn('w:eastAsia'), 'Times New Roman')
 
+
 def render_latex_to_image(latex_text: str, output_path: str) -> bool:
-    """
-    Render LaTeX/math equation to an image using Matplotlib with robust preamble.
-    Falls back to mathtext if LaTeX fails. Uses font size 14.
-    Returns True if successful, False otherwise.
-    """
     try:
-        matplotlib.use('Agg')  # Non-interactive backend
-        plt.figure(figsize=(8, 2), dpi=200)  # High DPI for clarity
-        # Try LaTeX rendering first
+        matplotlib.use('Agg')
+        plt.figure(figsize=(8, 2), dpi=200)
         plt.rc('text', usetex=True)
-        plt.rc('font', family='serif', size=14)  # Font size 14
-        plt.rc('text.latex', preamble=r'\usepackage{amsmath}\usepackage{amssymb}\usepackage{cm-super}\usepackage{mathptmx}')
+        plt.rc('font', family='serif', size=14)
+        plt.rc('text.latex', preamble=r'\usepackage{amsmath}\usepackage{amssymb}')
         plt.text(0.5, 0.5, f"${latex_text}$", ha='center', va='center')
         plt.axis('off')
         plt.savefig(output_path, bbox_inches='tight', pad_inches=0.05, transparent=True)
         plt.close()
-        logger.debug(f"Successfully rendered LaTeX: {latex_text}")
+        logger.debug(f"LaTeX rendered: {latex_text}")
         return True
     except Exception as e:
-        logger.warning(f"LaTeX rendering failed for '{latex_text}': {e}. Falling back to mathtext.")
+        logger.warning(f"LaTeX failed for '{latex_text}': {e}, falling back to mathtext.")
         try:
-            # Fallback to mathtext
             plt.rc('text', usetex=False)
             plt.figure(figsize=(8, 2), dpi=200)
             plt.rc('font', family='serif', size=14)
@@ -82,123 +73,86 @@ def render_latex_to_image(latex_text: str, output_path: str) -> bool:
             plt.axis('off')
             plt.savefig(output_path, bbox_inches='tight', pad_inches=0.05, transparent=True)
             plt.close()
-            logger.debug(f"Successfully rendered with mathtext: {latex_text}")
+            logger.debug(f"Mathtext rendered: {latex_text}")
             return True
         except Exception as e2:
-            logger.error(f"Mathtext rendering also failed for '{latex_text}': {e2}")
+            logger.error(f"Mathtext failed for '{latex_text}': {e2}")
             return False
 
-def detect_and_process_latex(cell, text: str):
-    """
-    Detect LaTeX/math content, validate, render to images, and insert into the cell.
-    Handles escaped characters and spaces correctly.
-    Non-LaTeX content is added as text.
-    """
-    # Regex to detect LaTeX: $...$, \(...\), \[...\]
-    latex_pattern = r'\$(.*?)\$|\((.*?)\)|\\\[([\s\S]*?)\\\]'
 
-    # Split text by LaTeX patterns
+def detect_and_process_latex(cell, text: str):
+    latex_pattern = r"\$(.*?)\$|\\\((.*?)\\\)|\\\[([\s\S]*?)\\\]"
     parts = []
     last_end = 0
     for match in re.finditer(latex_pattern, text, re.DOTALL):
         start, end = match.span()
-        # Add non-LaTeX text before the match
         if last_end < start:
             parts.append(('text', text[last_end:start]))
-        # Add LaTeX content
-        latex_content = next(g for g in match.groups() if g is not None)
-        # Normalize double backslashes (e.g., \\circ -> \circ)
-        latex_content = re.sub(r'\\{2,}', r'\\', latex_content)
-        # Validate: allow expressions with LaTeX commands, numbers, or math symbols
-        if latex_content.strip():
-            # Match LaTeX commands (e.g., \circ), numbers, or math symbols
-            if re.search(r'\\[a-zA-Z]+|[0-9]|\^|\_|\{|\}', latex_content):
-                parts.append(('latex', latex_content.strip()))
-                logger.debug(f"Detected valid LaTeX: {latex_content}")
-            else:
-                logger.warning(f"Treating as text (no LaTeX commands): {latex_content}")
-                parts.append(('text', latex_content))
-        else:
-            logger.warning(f"Skipping empty LaTeX content at position {start}-{end}")
-            parts.append(('text', latex_content))
+        content = next(g for g in match.groups() if g)
+        content = re.sub(r'\\{2,}', r'\\', content).strip()
+        parts.append(('latex', content))
         last_end = end
-    # Add remaining non-LaTeX text
     if last_end < len(text):
         parts.append(('text', text[last_end:]))
 
-    # Process each part
-    for part_type, content in parts:
-        if part_type == 'text':
-            paragraphs = [p.strip() for p in content.split('\n\n') if p.strip()]
-            for para in paragraphs:
+    for typ, cont in parts:
+        if typ == 'text':
+            # Split double newlines into paragraphs
+            paras = re.split(r'\n{2,}', cont)
+            for para in paras:
+                if not para.strip():
+                    continue
                 p = cell.add_paragraph()
-                p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-                add_markdown_to_paragraph(cell, para, paragraph=p)
-        elif part_type == 'latex':
-            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_file:
-                if render_latex_to_image(content, temp_file.name):
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                lines = para.split('\n')
+                for i, line in enumerate(lines):
+                    add_markdown_to_paragraph(cell, line, paragraph=p)
+                    if i < len(lines) - 1:
+                        p.add_run().add_break()
+        else:
+            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+                if render_latex_to_image(cont, tmp.name):
                     p = cell.add_paragraph()
                     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
                     run = p.add_run()
-                    run.add_picture(temp_file.name, width=Inches(3.5))
-                    os.unlink(temp_file.name)
+                    run.add_picture(tmp.name, width=Inches(3.5))
+                    os.unlink(tmp.name)
                 else:
-                    logger.warning(f"Failed to render LaTeX, inserting as text: {content}")
                     p = cell.add_paragraph()
-                    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-                    p.add_run(content)
+                    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    p.add_run(cont)
+
 
 def apply_html_styles(cell, html_content, paragraph=None):
-    """
-    Parse HTML content and apply equivalent Word styles to a cell or specified paragraph
-    """
     soup = BeautifulSoup(html_content, 'html.parser')
-
-    def process_node(node, paragraph, run_bold=False, run_italic=False, run_underline=False):
+    def recurse(node, p, bold, ital, under):
         if node.name == 'p':
-            p = cell.add_paragraph() if paragraph is None else paragraph
-            p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-            for child in node.children:
-                process_node(child, p, run_bold, run_italic, run_underline)
-        elif node.name:
-            new_bold = run_bold or node.name in ('strong', 'b')
-            new_italic = run_italic or node.name in ('em', 'i')
-            new_underline = run_underline or node.name == 'u'
-            for child in node.children:
-                process_node(child, paragraph, new_bold, new_italic, new_underline)
-        elif node.string and node.string.strip():
-            run = paragraph.add_run(node.string.strip())
-            run.font.name = 'Times New Roman'
-            run.font.size = Pt(14)
-            run.bold = run_bold
-            run.italic = run_italic
-            run.underline = run_underline
-
-    if paragraph is None:
-        paragraph = cell.paragraphs[0]
-        paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    for child in soup.find_all(recursive=False):
-        if child.name == 'p':
             p = cell.add_paragraph()
             p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-            for subchild in child.children:
-                process_node(subchild, p)
-        else:
-            process_node(child, paragraph)
+            for c in node.children:
+                recurse(c, p, bold, ital, under)
+        elif node.name:
+            nb = bold or node.name in ('b','strong')
+            ni = ital or node.name in ('i','em')
+            nu = under or node.name=='u'
+            for c in node.children:
+                recurse(c, p, nb, ni, nu)
+        elif node.string and node.string.strip():
+            run = p.add_run(node.string)
+            run.bold, run.italic, run.underline = bold, ital, under
+            run.font.name='Times New Roman'; run.font.size=Pt(14)
+    base_para = paragraph or cell.paragraphs[0]
+    for child in soup.contents:
+        recurse(child, base_para, False, False, False)
+
 
 def add_markdown_to_paragraph(cell, text, paragraph=None):
-    """
-    Parse Markdown or HTML text and apply Word styling to a cell or specified paragraph.
-    """
-    if re.search(r'\$(.*?)\$|\((.*?)\)|\\\[([\s\S]*?)\\\]', text, re.DOTALL):
+    if re.search(r"\$(.*?)\$", text):
         detect_and_process_latex(cell, text)
         return
-
-    if not re.search(r'<[a-zA-Z]+>', text):
-        html = markdown(text, extras=["fenced-code-blocks"])
-    else:
-        html = text
+    html = markdown(text) if '<' not in text else text
     apply_html_styles(cell, html, paragraph)
+
 
 def add_bulleted_list(cell, items):
     """
@@ -220,23 +174,10 @@ def add_bulleted_list(cell, items):
                 new_run.underline = run.underline
 
 def add_paragraphs_to_cell(cell, text):
-    """
-    Split text into paragraphs and add to a cell with HTML/Markdown styling
-    """
-    if re.search(r'\$(.*?)\$|\((.*?)\)|\\\[([\s\S]*?)\\\]', text, re.DOTALL):
-        detect_and_process_latex(cell, text)
-        return
+    # Use unified latex+newline handler
+    detect_and_process_latex(cell, text)
 
-    if re.search(r'<p>', text, re.IGNORECASE):
-        paragraphs = [p.strip() for p in re.split(r'<p>\s*</p>|<p>|</p>', text) if p.strip()]
-    else:
-        paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
     
-    for i, para in enumerate(paragraphs):
-        p = cell.paragraphs[0] if i == 0 else cell.add_paragraph()
-        p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-        add_markdown_to_paragraph(cell, para, paragraph=p)
-
 def sanitize_filename(filename):
     """
     Sanitize filename to remove invalid characters
@@ -370,15 +311,15 @@ def create_lesson_notes_template(data=None, logo_path='./assets/images/MostarLog
     cls = data.get("CLASS", "Unknown")
     filename = sanitize_filename(f"{cls} Lesson Notes {subject} WEEK {week}.docx")
     try:
-        doc.save(filename)
-        file_path = os.path.join(UPLOAD_FOLDER, filename)
-        doc.save(file_path)
-        file_path = os.path.abspath(file_path)
+        doc.save(f'{UPLOAD_FOLDER}/{filename}')
+        file_path = os.path.abspath(os.path.join(UPLOAD_FOLDER,filename))
         logger.info(f"Lesson notes template created successfully: {file_path}")
         return file_path
     except Exception as e:
         logger.error(f"Error saving document: {e}")
         raise
+
+ 
 
 # Pydantic model for input validation
 class InputModel(BaseModel):
