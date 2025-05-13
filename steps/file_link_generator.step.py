@@ -54,6 +54,7 @@ class InputModel(BaseModel):
     file_path: str
     user_phone: str
     subject: str
+    email: str
 
 # Motia configuration
 config = {
@@ -144,13 +145,14 @@ async def handler(input: Any, context: Any) -> Dict[str, Any]:
                 "file_path": file_data.file_path,
                 "subject": file_data.subject,
                 "expires_at": file_data.expires_at},
-                'user_phone': validated_input.user_phone
+                'user_phone': validated_input.user_phone,
+                'email': validated_input.email
             }
         })
         logger.info(f"Emitted file-link-generated event for {file_data.subject}")
         return {
             'status': 200,
-            'body': {'download_link': download_link, 'user_phone': validated_input.user_phone}
+            'body': {'download_link': download_link, 'user_phone': validated_input.user_phone, 'email': validated_input.email}
         }
     except Exception as e:
         logger.error(f"Failed to emit file-link-generated event: {e}")

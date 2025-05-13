@@ -384,6 +384,7 @@ def create_lesson_notes_template(data=None, logo_path='./assets/images/MostarLog
 class InputModel(BaseModel):
     lesson_note: Dict[str, Any]
     user_phone: str
+    email: str
 
 # Motia configuration
 config = {
@@ -433,7 +434,8 @@ async def handler(input: Any, context: Any) -> Dict[str, Any]:
           # Emit lesson note
         await context.emit({
             "topic": "file-generated",
-            "data": {'file_path': file_path, 'subject':lesson_note_data.get("SUBJECT"),'user_phone':validated_input.user_phone},
+            "data": {'file_path': file_path, 'subject':lesson_note_data.get("SUBJECT"),'user_phone':validated_input.user_phone,
+                     'email': validated_input.email},
         })
         return {
             'status': 200,

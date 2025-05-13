@@ -23,7 +23,6 @@ load_dotenv()
 WEBHOOK_URL = os.getenv("WEBHOOK_URL", "http://example.com/webhook")  # User-provided webhook URL
 MOTIA_API_BASE_URL = os.getenv("MOTIA_API_BASE_URL", "http://localhost:3000")  # Base URL for Motia API
 
-# External in-memory store (shared with file_link_generator.step.py)
 
 class FileLinkData(BaseModel):
     download_link: str
@@ -47,6 +46,8 @@ config = {
     "input": InputModel.model_json_schema(),
     "flows": ["default"],
 }
+
+
 
 async def handler(input: Any, context: Any) -> Dict[str, Any]:
     """

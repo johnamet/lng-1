@@ -13,6 +13,7 @@ const inputSchema = z.object({
   days: z.string().min(1, 'Days are required'),
   week: z.string().min(1, 'Week is required'),
   phone_number: z.string().min(1, 'User phone is required'),
+  email: z.string().email('Invalid email address').optional(),
   custom_instructions: z.string().optional().default(''),
 });
 
@@ -35,7 +36,7 @@ export const handler: StepHandler<typeof config> = async (req, { logger, emit })
   logger.info('Processing default flow API step', req.body);
 
   // Extract and structure lesson notes data
-  const { subject, class_level, topic, week_ending, cls_size, duration, days, week, custom_instructions, phone_number } = req.body;
+  const { subject, class_level, topic, week_ending, cls_size, duration, days, week, custom_instructions, phone_number, email } = req.body;
   const lesson_notes = {
     subject,
     class_level,
@@ -54,7 +55,7 @@ export const handler: StepHandler<typeof config> = async (req, { logger, emit })
   // Emit generate-notes event
   await emit({
     topic: 'generate-notes',
-    data: { lesson_notes, phone_number },
+    data: { lesson_notes, phone_number, email },
   });
 
   // Return success response
