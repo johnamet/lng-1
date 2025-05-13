@@ -41,8 +41,14 @@ export default function StepThree({ formData, updateFormData, errors }: StepThre
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-4">
-        <Label className="text-base font-medium">Classes</Label>
-        <Button type="button" variant="outline" size="sm" onClick={addClass} className="flex items-center gap-1">
+        <Label className="text-base font-semibold text-gray-800">Classes</Label>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={addClass}
+          className="flex items-center gap-2 border-indigo-300 text-indigo-600 hover:bg-indigo-50 hover:border-indigo-400 rounded-lg transition-all"
+        >
           <Plus className="h-4 w-4" />
           Add Class
         </Button>
@@ -58,17 +64,17 @@ export default function StepThree({ formData, updateFormData, errors }: StepThre
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3 }}
-            className="bg-slate-50 p-4 rounded-md mb-4"
+            className="bg-white p-4 rounded-lg shadow-sm border border-gray-200"
           >
             <div className="flex justify-between items-center mb-3">
-              <h4 className="font-medium">Class {index + 1}</h4>
+              <h4 className="font-semibold text-gray-800">Class {index + 1}</h4>
               {formData.classes.length > 1 && (
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
                   onClick={() => removeClass(index)}
-                  className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                  className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-all"
                 >
                   <Trash2 className="h-4 w-4" />
                   <span className="sr-only">Remove class</span>
@@ -78,23 +84,29 @@ export default function StepThree({ formData, updateFormData, errors }: StepThre
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor={`class-name-${index}`}>Class Name</Label>
+                <Label htmlFor={`class-name-${index}`} className="text-sm font-medium text-gray-700">
+                  Class Name
+                </Label>
                 <Input
                   id={`class-name-${index}`}
                   value={cls.name}
                   onChange={(e) => handleClassChange(index, "name", e.target.value)}
                   placeholder="e.g., Class A"
+                  className="rounded-lg border-gray-300 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor={`class-size-${index}`}>Size</Label>
+                <Label htmlFor={`class-size-${index}`} className="text-sm font-medium text-gray-700">
+                  Size
+                </Label>
                 <Input
                   id={`class-size-${index}`}
                   type="number"
                   value={cls.size}
                   onChange={(e) => handleClassChange(index, "size", e.target.value)}
                   placeholder="e.g., 25"
+                  className="rounded-lg border-gray-300 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                 />
               </div>
             </div>
@@ -107,7 +119,7 @@ export default function StepThree({ formData, updateFormData, errors }: StepThre
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="text-sm text-green-600 mt-2"
+          className="text-sm text-indigo-600 mt-2"
         >
           New class added! Fill in the details.
         </motion.p>

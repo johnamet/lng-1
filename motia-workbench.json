@@ -1,8 +1,8 @@
 {
   "default": {
     "steps/api.step.ts": {
-      "x": 415.92934969531507,
-      "y": 179.45307586511365
+      "x": 523.9293496953151,
+      "y": 113.45307586511365
     },
     "steps/noop.step.ts": {
       "x": 592.8801194374963,
@@ -39,6 +39,14 @@
     "steps/webhook_notifies.step.py": {
       "x": 5.25,
       "y": 906
+    },
+    "steps/main.step.py": {
+      "x": 313.5,
+      "y": 752
+    },
+    "steps/email_notifier.step.py": {
+      "x": 279.5,
+      "y": 902
     }
   },
   "openai": {

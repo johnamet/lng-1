@@ -11,6 +11,8 @@ from flask import Blueprint
 import redis
 import redis.exceptions
 from werkzeug.utils import secure_filename
+from pydantic import Basemodel
+
 
 # Configure logging
 logging.basicConfig(
@@ -29,14 +31,32 @@ app = Flask(__name__, static_folder=None)
 
 # API blueprint
 api_blueprint = Blueprint('LNG-FILE-SERVER', __name__, url_prefix='/lng/v1')
+class FileLinkData(BaseModel):
+    download_link: str
+    file_path: str
+    subject: str
+    expires_at: str
 
+class InputModel(BaseModel):
+    user_phone: str
+    file_link_data: FileLinkData | Dict[str, Any]  # Accepts either a FileLinkData object or a dictionary
+
+config = {
+    "type": "event",
+    "name": "Socket Notifier",
+    "description": "Sends Socket notifications for lesson notes files",
+    "subscribes": ["file-link-generated"],
+    "emits": [],
+    "input": InputModel.model_json_schema(),
+    "flows": ["default"]
+}
 
 CORS(app, resources={r"/lng/v1/*": {"origins": "http://localhost:3001"}})
-Talisman(app, content_security_policy={
-    'default-src': "'self'",
-    'script-src': "'self'",
-    'style-src': "'self' 'unsafe-inline'",
-})
+#Talisman(app, content_security_policy={
+ #   'default-src': "'self'",
+  #  'script-src': "'self'",
+   # 'style-src': "'self' 'unsafe-inline'",
+#})
 
 # Rate limiting
 limiter = Limiter(

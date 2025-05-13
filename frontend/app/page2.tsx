@@ -52,7 +52,7 @@ export default function Home() {
           }[currentStep] || 0
         return prev < maxFields ? prev + 1 : prev
       })
-    }, 300) // Reduced to 300ms for smoother animations
+    }, 400)
     return () => clearInterval(timer)
   }, [currentStep])
 
@@ -109,7 +109,6 @@ export default function Home() {
 
     setLoading(true)
     try {
-      const agentUrl = process.env.NEXT_PUBLIC_AGENT_URL || "http://localhost:3000"
       // Convert classes array to cls_size object
       const cls_size = formData.classes.reduce((acc, cls) => {
         if (cls.name && cls.size) {
@@ -119,7 +118,7 @@ export default function Home() {
         return acc
       }, {})
 
-      const response = await axios.post(`${agentUrl}/lng/v1/generate-notes`, {
+      const response = await axios.post(`${process.env.NEXT_PUBLIC_AGENT_URL}/lng/v1/generate-notes`, {
         subject: formData.subject,
         class_level: formData.class_level,
         topic: formData.topic,
@@ -129,26 +128,20 @@ export default function Home() {
         days: formData.days,
         week: formData.week,
         phone_number: formData.phone_number,
-        user_email: formData.email, // Changed to user_email to match backend
+        email: formData.email,
         custom_instructions: formData.custom_instructions,
       })
 
       const fileUrl = response.data.fileUrl || response.data.filePath
       setNotification({
         type: "success",
-        message: "Lesson notes generated successfully! Check your WhatsApp and email for the download link.",
+        message: "Lesson notes generated successfully! Notifications have been sent.",
         fileUrl,
       })
     } catch (error) {
-      let errorMessage = "Failed to generate lesson notes. Please try again."
-      if (axios.isAxiosError(error)) {
-        errorMessage = error.response?.data?.message || "Server error occurred."
-      } else if (error instanceof Error) {
-        errorMessage = error.message
-      }
       setNotification({
         type: "error",
-        message: errorMessage,
+        message: error.response?.data?.message || "Failed to generate lesson notes. Please try again.",
       })
     } finally {
       setLoading(false)
@@ -238,7 +231,6 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.5 }}
-            className="mb-6"
           >
             <NotificationCard
               type={notification.type}
@@ -249,85 +241,88 @@ export default function Home() {
           </motion.div>
         )}
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <Card className="shadow-2xl border-none bg-white/80 backdrop-blur-sm rounded-2xl overflow-hidden">
-            <CardHeader className="pb-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-t-2xl">
-              <CardTitle className="text-2xl font-semibold">
-                Step {currentStep} of {totalSteps}
-              </CardTitle>
-              <CardDescription className="text-indigo-100">
-                {currentStep === 1 && "Start with the core details"}
-                {currentStep === 2 && "Add time-related information"}
-                {currentStep === 3 && "Define your classes"}
-                {currentStep === 4 && "Provide your contact details"}
-                {currentStep === 5 && "Include any special instructions"}
-              </CardDescription>
-              <Progress
-                value={progress}
-                className="h-2 mt-3 bg-indigo-300/50 [&>div]:bg-gradient-to-r [&>div]:from-indigo-400 [&>div]:to-purple-500"
-              />
-            </CardHeader>
+        {!notification && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Card className="shadow-2xl border-none bg-white/80 backdrop-blur-sm rounded-2xl overflow-hidden">
+              <CardHeader className="pb-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-t-2xl">
+                <CardTitle className="text-2xl font-semibold">
+                  Step {currentStep} of {totalSteps}
+                </CardTitle>
+                <CardDescription className="text-indigo-100">
+                  {currentStep === 1 && "Start with the core details"}
+                  {currentStep === 2 && "Add time-related information"}
+                  {currentStep === 3 && "Define your classes"}
+                  {currentStep === 4 && "Provide your contact details"}
+                  {currentStep === 5 && "Include any special instructions"}
+                </CardDescription>
+                <Progress
+                  value={progress}
+                  className="h-2 mt-3 bg-indigo-300/50"
+                  indicatorClassName="bg-gradient-to-r from-indigo-400 to-purple-500"
+                />
+              </CardHeader>
 
-            <CardContent className="pt-6 px-8">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={currentStep}
-                  initial={{ opacity: 0, x: 50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -50 }}
-                  transition={{ duration: 0.4, ease: "easeInOut" }}
-                >
-                  {renderStep()}
-                </motion.div>
-              </AnimatePresence>
-            </CardContent>
+              <CardContent className="pt-6 px-8">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentStep}
+                    initial={{ opacity: 0, x: 50 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -50 }}
+                    transition={{ duration: 0.4, ease: "easeInOut" }}
+                  >
+                    {renderStep()}
+                  </motion.div>
+                </AnimatePresence>
+              </CardContent>
 
-            <CardFooter className="flex justify-between pt-6 px-8 pb-8 bg-gray-50/50">
-              <Button
-                variant="outline"
-                onClick={handlePrevious}
-                disabled={currentStep === 1}
-                className="flex items-center gap-2 text-gray-600 border-gray-300 hover:bg-gray-100 transition-colors rounded-lg px-4 py-2"
-              >
-                <ChevronLeft className="h-5 w-5" />
-                Back
-              </Button>
-
-              {currentStep < totalSteps ? (
+              <CardFooter className="flex justify-between pt-6 px-8 pb-8 bg-gray-50/50">
                 <Button
-                  onClick={handleNext}
-                  className="flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-lg px-4 py-2 transition-all duration-300"
+                  variant="outline"
+                  onClick={handlePrevious}
+                  disabled={currentStep === 1}
+                  className="flex items-center gap-2 text-gray-600 border-gray-300 hover:bg-gray-100 transition-colors rounded-lg px-4 py-2"
                 >
-                  Next
-                  <ChevronRight className="h-5 w-5" />
+                  <ChevronLeft className="h-5 w-5" />
+                  Back
                 </Button>
-              ) : (
-                <Button
-                  onClick={handleSubmit}
-                  disabled={loading}
-                  className="flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-lg px-4 py-2 transition-all duration-300"
-                >
-                  {loading ? (
-                    <>
-                      <span className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full mr-2" />
-                      Submitting...
-                    </>
-                  ) : (
-                    <>
-                      Generate Notes
-                      <Send className="h-5 w-5" />
-                    </>
-                  )}
-                </Button>
-              )}
-            </CardFooter>
-          </Card>
-        </motion.div>
-      </motion.div>
-    </div>
+
+                {currentStep < totalSteps ? (
+                  <Button
+                    onClick={handleNext}
+                    className="flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-lg px-4 py-2 transition-all duration-300"
+                  >
+                    Next
+                    <ChevronRight className="h-5 w-5" />
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={loading}
+                    className="flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-lg px-4 py-2 transition-all duration-300"
+                  >
+                    {loading ? (
+                      <>
+                        <span className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full mr-2" />
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        Generate Notes
+                        <Send className="h-5 w-5" />
+                      </>
+                    )}
+                  </Button>
+                )}
+              </CardFooter>
+            </Card>
+          </motion.div>
+        )}
+      </div>
+    </motion.div>
   )
 }

@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { motion } from "framer-motion"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -30,6 +29,7 @@ export default function StepTwo({ formData, updateFormData, errors, visibleField
       label: "Week Ending",
       value: formData.week_ending,
       placeholder: "e.g., 16th May, 2025",
+      helper: "Enter the date the week ends.",
       error: errors.week_ending,
     },
     {
@@ -37,6 +37,7 @@ export default function StepTwo({ formData, updateFormData, errors, visibleField
       label: "Duration",
       value: formData.duration,
       placeholder: "e.g., 4 periods per class",
+      helper: "Specify the duration of the lesson per class.",
       error: errors.duration,
     },
     {
@@ -44,6 +45,7 @@ export default function StepTwo({ formData, updateFormData, errors, visibleField
       label: "Days",
       value: formData.days,
       placeholder: "e.g., Monday - Friday",
+      helper: "List the days the lessons will occur.",
       error: errors.days,
     },
     {
@@ -51,6 +53,7 @@ export default function StepTwo({ formData, updateFormData, errors, visibleField
       label: "Week Number",
       value: formData.week,
       placeholder: "e.g., 3",
+      helper: "Enter the week number in the term.",
       error: errors.week,
     },
   ]
@@ -63,15 +66,16 @@ export default function StepTwo({ formData, updateFormData, errors, visibleField
           className="space-y-2"
           initial={{ opacity: 0, y: 20 }}
           animate={{
-            opacity: index <= visibleFieldIndex ? 1 : 0,
-            y: index <= visibleFieldIndex ? 0 : 20,
+            opacity: index + 1 <= visibleFieldIndex ? 1 : 0,
+            y: index + 1 <= visibleFieldIndex ? 0 : 20,
           }}
           transition={{
-            duration: 0.5,
+            duration: 0.4,
+            delay: index * 0.1,
             ease: "easeOut",
           }}
         >
-          <Label htmlFor={field.id} className={field.error ? "text-red-500" : ""}>
+          <Label htmlFor={field.id} className={`block text-sm font-medium ${field.error ? "text-red-500" : "text-gray-700"}`}>
             {field.label}
           </Label>
           <Input
@@ -80,9 +84,10 @@ export default function StepTwo({ formData, updateFormData, errors, visibleField
             value={field.value}
             onChange={handleChange}
             placeholder={field.placeholder}
-            className={field.error ? "border-red-500 focus-visible:ring-red-500" : ""}
-            disabled={index > visibleFieldIndex}
+            className={`rounded-lg border-gray-300 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all ${field.error ? "border-red-500 focus:ring-red-500" : ""}`}
+            disabled={index + 1 > visibleFieldIndex}
           />
+          <p className="text-sm text-muted-foreground mt-1">{field.helper}</p>
           {field.error && <p className="text-sm text-red-500 mt-1">{field.error}</p>}
         </motion.div>
       ))}
