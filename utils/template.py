@@ -1,18 +1,15 @@
 #!/usr/bin/env python3
 """
-Module to generate the template for lesson notes customized to Morning Star School.
-Supports LaTeX math expressions converted to Word equations using SymPy.
+Module to generate lesson notes template for Morning Star School
 """
-# Standard library imports
 import os
 import re
 import logging
-from typing import Dict, Any
 import tempfile
-import matplotlib.pyplot as plt
-import matplotlib
+from typing import Dict, Any
 
-# Third-party imports
+import matplotlib
+import matplotlib.pyplot as plt
 import warnings
 from pydantic import BaseModel
 from docx import Document
@@ -25,20 +22,24 @@ from markdown2 import markdown
 from bs4 import BeautifulSoup
 
 # Suppress deprecated style_id warning
-warnings.filterwarnings("ignore", category=UserWarning, module="docx.styles.styles")
+warnings.filterwarnings(
+    "ignore", category=UserWarning, module="docx.styles.styles"
+)
 
 # Configure logging
 logging.basicConfig(
-    level=logging.DEBUG,  # Detailed logging for LaTeX parsing
+    level=logging.DEBUG,
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
-# Helper functions for DOCX formatting
+# Directory to serve files from
+UPLOAD_FOLDER = 'generated_files'
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+
 def set_cell_text(cell, text, bold=False, font_size=12, align='center'):
-    """
-    Helper to insert styled text into a cell
-    """
     cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
     p = cell.paragraphs[0]
     p.alignment = getattr(WD_ALIGN_PARAGRAPH, align.upper())
@@ -48,29 +49,23 @@ def set_cell_text(cell, text, bold=False, font_size=12, align='center'):
     run.bold = bold
     run._element.rPr.rFonts.set(qn('w:eastAsia'), 'Times New Roman')
 
+
 def render_latex_to_image(latex_text: str, output_path: str) -> bool:
-    """
-    Render LaTeX/math equation to an image using Matplotlib with robust preamble.
-    Falls back to mathtext if LaTeX fails. Uses font size 14.
-    Returns True if successful, False otherwise.
-    """
     try:
-        matplotlib.use('Agg')  # Non-interactive backend
-        plt.figure(figsize=(8, 2), dpi=200)  # High DPI for clarity
-        # Try LaTeX rendering first
+        matplotlib.use('Agg')
+        plt.figure(figsize=(8, 2), dpi=200)
         plt.rc('text', usetex=True)
-        plt.rc('font', family='serif', size=14)  # Font size 14
-        plt.rc('text.latex', preamble=r'\usepackage{amsmath}\usepackage{amssymb}\usepackage{cm-super}\usepackage{mathptmx}')
+        plt.rc('font', family='serif', size=14)
+        plt.rc('text.latex', preamble=r'\usepackage{amsmath}\usepackage{amssymb}')
         plt.text(0.5, 0.5, f"${latex_text}$", ha='center', va='center')
         plt.axis('off')
         plt.savefig(output_path, bbox_inches='tight', pad_inches=0.05, transparent=True)
         plt.close()
-        logger.debug(f"Successfully rendered LaTeX: {latex_text}")
+        logger.debug(f"LaTeX rendered: {latex_text}")
         return True
     except Exception as e:
-        logger.warning(f"LaTeX rendering failed for '{latex_text}': {e}. Falling back to mathtext.")
+        logger.warning(f"LaTeX failed for '{latex_text}': {e}, falling back to mathtext.")
         try:
-            # Fallback to mathtext
             plt.rc('text', usetex=False)
             plt.figure(figsize=(8, 2), dpi=200)
             plt.rc('font', family='serif', size=14)
@@ -78,123 +73,86 @@ def render_latex_to_image(latex_text: str, output_path: str) -> bool:
             plt.axis('off')
             plt.savefig(output_path, bbox_inches='tight', pad_inches=0.05, transparent=True)
             plt.close()
-            logger.debug(f"Successfully rendered with mathtext: {latex_text}")
+            logger.debug(f"Mathtext rendered: {latex_text}")
             return True
         except Exception as e2:
-            logger.error(f"Mathtext rendering also failed for '{latex_text}': {e2}")
+            logger.error(f"Mathtext failed for '{latex_text}': {e2}")
             return False
 
-def detect_and_process_latex(cell, text: str):
-    """
-    Detect LaTeX/math content, validate, render to images, and insert into the cell.
-    Handles escaped characters and spaces correctly.
-    Non-LaTeX content is added as text.
-    """
-    # Regex to detect LaTeX: $...$, \(...\), \[...\]
-    latex_pattern = r'\$(.*?)\$|\((.*?)\)|\\\[([\s\S]*?)\\\]'
 
-    # Split text by LaTeX patterns
+def detect_and_process_latex(cell, text: str):
+    latex_pattern = r"\$(.*?)\$|\\\((.*?)\\\)|\\\[([\s\S]*?)\\\]"
     parts = []
     last_end = 0
     for match in re.finditer(latex_pattern, text, re.DOTALL):
         start, end = match.span()
-        # Add non-LaTeX text before the match
         if last_end < start:
             parts.append(('text', text[last_end:start]))
-        # Add LaTeX content
-        latex_content = next(g for g in match.groups() if g is not None)
-        # Normalize double backslashes (e.g., \\circ -> \circ)
-        latex_content = re.sub(r'\\{2,}', r'\\', latex_content)
-        # Validate: allow expressions with LaTeX commands, numbers, or math symbols
-        if latex_content.strip():
-            # Match LaTeX commands (e.g., \circ), numbers, or math symbols
-            if re.search(r'\\[a-zA-Z]+|[0-9]|\^|\_|\{|\}', latex_content):
-                parts.append(('latex', latex_content.strip()))
-                logger.debug(f"Detected valid LaTeX: {latex_content}")
-            else:
-                logger.warning(f"Treating as text (no LaTeX commands): {latex_content}")
-                parts.append(('text', latex_content))
-        else:
-            logger.warning(f"Skipping empty LaTeX content at position {start}-{end}")
-            parts.append(('text', latex_content))
+        content = next(g for g in match.groups() if g)
+        content = re.sub(r'\\{2,}', r'\\', content).strip()
+        parts.append(('latex', content))
         last_end = end
-    # Add remaining non-LaTeX text
     if last_end < len(text):
         parts.append(('text', text[last_end:]))
 
-    # Process each part
-    for part_type, content in parts:
-        if part_type == 'text':
-            paragraphs = [p.strip() for p in content.split('\n\n') if p.strip()]
-            for para in paragraphs:
+    for typ, cont in parts:
+        if typ == 'text':
+            # Split double newlines into paragraphs
+            paras = re.split(r'\n{2,}', cont)
+            for para in paras:
+                if not para.strip():
+                    continue
                 p = cell.add_paragraph()
-                p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-                add_markdown_to_paragraph(cell, para, paragraph=p)
-        elif part_type == 'latex':
-            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_file:
-                if render_latex_to_image(content, temp_file.name):
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                lines = para.split('\n')
+                for i, line in enumerate(lines):
+                    add_markdown_to_paragraph(cell, line, paragraph=p)
+                    if i < len(lines) - 1:
+                        p.add_run().add_break()
+        else:
+            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+                if render_latex_to_image(cont, tmp.name):
                     p = cell.add_paragraph()
                     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
                     run = p.add_run()
-                    run.add_picture(temp_file.name, width=Inches(3.5))
-                    os.unlink(temp_file.name)
+                    run.add_picture(tmp.name, width=Inches(3.5))
+                    os.unlink(tmp.name)
                 else:
-                    logger.warning(f"Failed to render LaTeX, inserting as text: {content}")
                     p = cell.add_paragraph()
-                    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-                    p.add_run(content)
+                    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    p.add_run(cont)
+
 
 def apply_html_styles(cell, html_content, paragraph=None):
-    """
-    Parse HTML content and apply equivalent Word styles to a cell or specified paragraph
-    """
     soup = BeautifulSoup(html_content, 'html.parser')
-
-    def process_node(node, paragraph, run_bold=False, run_italic=False, run_underline=False):
+    def recurse(node, p, bold, ital, under):
         if node.name == 'p':
-            p = cell.add_paragraph() if paragraph is None else paragraph
-            p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-            for child in node.children:
-                process_node(child, p, run_bold, run_italic, run_underline)
-        elif node.name:
-            new_bold = run_bold or node.name in ('strong', 'b')
-            new_italic = run_italic or node.name in ('em', 'i')
-            new_underline = run_underline or node.name == 'u'
-            for child in node.children:
-                process_node(child, paragraph, new_bold, new_italic, new_underline)
-        elif node.string and node.string.strip():
-            run = paragraph.add_run(node.string.strip())
-            run.font.name = 'Times New Roman'
-            run.font.size = Pt(14)
-            run.bold = run_bold
-            run.italic = run_italic
-            run.underline = run_underline
-
-    if paragraph is None:
-        paragraph = cell.paragraphs[0]
-        paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    for child in soup.find_all(recursive=False):
-        if child.name == 'p':
             p = cell.add_paragraph()
             p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-            for subchild in child.children:
-                process_node(subchild, p)
-        else:
-            process_node(child, paragraph)
+            for c in node.children:
+                recurse(c, p, bold, ital, under)
+        elif node.name:
+            nb = bold or node.name in ('b','strong')
+            ni = ital or node.name in ('i','em')
+            nu = under or node.name=='u'
+            for c in node.children:
+                recurse(c, p, nb, ni, nu)
+        elif node.string and node.string.strip():
+            run = p.add_run(node.string)
+            run.bold, run.italic, run.underline = bold, ital, under
+            run.font.name='Times New Roman'; run.font.size=Pt(14)
+    base_para = paragraph or cell.paragraphs[0]
+    for child in soup.contents:
+        recurse(child, base_para, False, False, False)
+
 
 def add_markdown_to_paragraph(cell, text, paragraph=None):
-    """
-    Parse Markdown or HTML text and apply Word styling to a cell or specified paragraph.
-    """
-    if re.search(r'\$(.*?)\$|\((.*?)\)|\\\[([\s\S]*?)\\\]', text, re.DOTALL):
+    if re.search(r"\$(.*?)\$", text):
         detect_and_process_latex(cell, text)
         return
-
-    if not re.search(r'<[a-zA-Z]+>', text):
-        html = markdown(text, extras=["fenced-code-blocks"])
-    else:
-        html = text
+    html = markdown(text) if '<' not in text else text
     apply_html_styles(cell, html, paragraph)
+
 
 def add_bulleted_list(cell, items):
     """
@@ -216,23 +174,10 @@ def add_bulleted_list(cell, items):
                 new_run.underline = run.underline
 
 def add_paragraphs_to_cell(cell, text):
-    """
-    Split text into paragraphs and add to a cell with HTML/Markdown styling
-    """
-    if re.search(r'\$(.*?)\$|\((.*?)\)|\\\[([\s\S]*?)\\\]', text, re.DOTALL):
-        detect_and_process_latex(cell, text)
-        return
+    # Use unified latex+newline handler
+    detect_and_process_latex(cell, text)
 
-    if re.search(r'<p>', text, re.IGNORECASE):
-        paragraphs = [p.strip() for p in re.split(r'<p>\s*</p>|<p>|</p>', text) if p.strip()]
-    else:
-        paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
     
-    for i, para in enumerate(paragraphs):
-        p = cell.paragraphs[0] if i == 0 else cell.add_paragraph()
-        p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-        add_markdown_to_paragraph(cell, para, paragraph=p)
-
 def sanitize_filename(filename):
     """
     Sanitize filename to remove invalid characters
@@ -374,38 +319,4 @@ def create_lesson_notes_template(data=None, logo_path='./assets/images/MostarLog
         logger.error(f"Error saving document: {e}")
         raise
 
-if __name__ == "__main__":
-    example_data = {
-        "WEEK_ENDING": "16th May, 2025",
-        "DAYS": "Monday - Friday",
-        "WEEK": "3",
-        "DURATION": "4 periods per class",
-        "SUBJECT": "Mathematics",
-        "STRAND": "Strand 3: Geometry and Measurement",
-        "SUBSTRAND": "Substrand 2: Angles and Polygons",
-        "CLASS": "Basic Eight",
-        "CLASS_SIZE": {"A": 28, "B": 28, "C": 28},
-        "CONTENT_STANDARD": ["B8.3.2.1: Demonstrate understanding of properties of polygons and solve related problems"],
-        "LEARNING_INDICATORS": ["B8.3.2.1.1: Identify and calculate interior and exterior angles of polygons"],
-        "PERFORMANCE_INDICATORS": [
-            "Calculate the sum of interior angles of various polygons.",
-            "Determine the measure of an exterior angle of a regular polygon.",
-            "Solve real-life problems involving angles in polygons."
-        ],
-        "TEACHING_LEARNING_RESOURCES": ["Charts showing different polygons", "Markers", "Whiteboard", "Protractor"],
-        "CORE_COMPETENCIES": ["Creativity", "Critical Thinking", "Collaboration"],
-        "KEY_WORDS": ["Polygon", "Interior Angle", "Exterior Angle", "Regular Polygon", "Irregular Polygon", "Sum of Angles", "Vertex"],
-        "R.P.K": "Learners have basic knowledge of triangles and quadrilaterals and can identify polygons with up to six sides.",
-        "PHASE_1": {
-            "STARTER": "Begin the lesson by asking students to name different shapes they see around them and classify them as polygons or non-polygons. Discuss what makes a shape a polygon and introduce the concept of angles in these shapes."
-        },
-        "PHASE_2": {
-            "MAIN": "The objective of this lesson is to understand and calculate the angles in various polygons, which are essential components in both mathematics and everyday life. We will explore both interior and exterior angles and apply these concepts to solve problems. \n\n1. **Lesson Objective:** By the end of the lesson, learners should be able to calculate the sum of interior angles and the measure of exterior angles in polygons. \n\n2. **Introduction:** Consider the Ghanaian Kente cloth, which often features geometric patterns. These patterns include various polygons, such as triangles, squares, and hexagons. Understanding the properties of these shapes helps in creating precise and beautiful designs. Similarly, the architecture of traditional Ghanaian buildings often incorporates polygonal shapes for aesthetic and structural purposes. \n\n3. **Step-by-Step Explanation:** \n   - **Interior Angles:** The sum of the interior angles of a polygon with \\( n \\) sides can be calculated using the formula: \n     \\[ (n - 2) \\times 180^\\circ \\] \n     For example, a pentagon (5 sides) has an interior angle sum of: \n     \\[ (5 - 2) \\times 180^\\circ = 540^\\circ \\] \n   - **Exterior Angles:** The sum of the exterior angles of any polygon is always \\( 360^\\circ \\). For a regular polygon, each exterior angle can be calculated by dividing \\( 360^\\circ \\) by the number of sides \\( n \\): \n     \\[ \\text{Exterior Angle} = \\frac{360^\\circ}{n} \\] \n     For a hexagon, each exterior angle is: \n     \\[ \\frac{360^\\circ}{6} = 60^\\circ \\] \n\n4. **Guided Practice:** \n   - **Activity 1:** Use the protractor to measure angles of different polygons drawn on the whiteboard. Collaboratively calculate the interior angle sum for each shape. \n   - **Activity 2:** In groups, create and decorate a polygon cut-out (triangle, square, pentagon) and label each angle. Calculate both interior and exterior angles. \n\n5. **Independent Practice:** \n   - Problem 1: Calculate the sum of interior angles of a nonagon (9 sides). \n   - Problem 2: Determine the measure of one interior angle of a regular octagon. \n   - Problem 3: A polygon has an exterior angle of \\( 45^\\circ \\). How many sides does this polygon have?"
-        },
-        "PHASE_3": {
-            "REFLECTION": "Review the key concepts of interior and exterior angles in polygons. Ask students to share how they might use these calculations in real-life scenarios, such as designing patterns or constructing objects. Clarify any mistakes and emphasize the importance of accuracy in calculations. Discuss how understanding these concepts can aid in solving more complex geometrical problems."
-        },
-        "ASSESSMENTS": "Observe learners as they engage in activities, ensuring they collaborate effectively and understand the concepts. Provide immediate feedback and address any misconceptions during the lesson. Use a short quiz at the end to assess their understanding of interior and exterior angles in polygons.",
-        "HOMEWORK": "Complete the following problems: 1) Calculate the sum of the interior angles of a decagon (10 sides). 2) If each exterior angle of a regular polygon is \\( 30^\\circ \\), how many sides does the polygon have? Ensure to show all your workings."
-    }
-    create_lesson_notes_template(example_data)
+ 
