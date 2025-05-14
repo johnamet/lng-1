@@ -85,29 +85,25 @@ def validate_lesson_note(lesson_note: Dict) -> bool:
 
        # Predefined subject-specific instruction templates
 SUBJECT_INSTRUCTIONS = {
-        "mathematics": """
+    "mathematics": """
 For Mathematics, include at least three LaTeX-formatted equations or formulas in PHASE_2: MAIN,
 using inline \\( ... \\) or display \\[ ... \\] formats. Ensure equations are relevant to the topic
 "{topic}" and appropriate for {class_level}. Include step-by-step derivations or explanations.
 """,
-        "french": """
-For French, include at least two language exercises in PHASE_2: MAIN, such as vocabulary matching,
-sentence completion, or translation tasks. Ensure exercises are culturally relevant to Ghanaian
-students and appropriate for {class_level}. Include 5–7 French vocabulary words with English
-translations in KEY_WORDS.
+    "french": """
+Pour le français, rédigez tout en français au lieu de l'anglais. Incluez au moins deux exercices de langue dans PHASE_2 : PRINCIPAL, tels que des appariements de vocabulaire, des complétions de phrases ou des tâches de traduction. Assurez-vous que les exercices sont culturellement pertinents pour les élèves ghanéens et adaptés au niveau {class_level}. Incluez 5 à 7 mots de vocabulaire français avec leurs traductions en anglais dans MOTS_CLÉS.
 """,
-        "science": """
+    "science": """
 For Science, include at least two hands-on experiments or demonstrations in PHASE_2: MAIN.
 Ensure activities are safe, use locally available materials, and are relevant to {topic} and
 {class_level}. Include 5–7 scientific terms in KEY_WORDS.
 """,
-        "english": """
+    "english": """
 For English, include at least two language activities in PHASE_2: MAIN, such as writing exercises,
 reading comprehension, or grammar tasks. Ensure activities are culturally relevant to Ghanaian
 students and appropriate for {class_level}. Include 5–7 vocabulary words in KEY_WORDS.
 """
-    }
-
+}
 
 # Lesson note generation
 def generate_lesson_note(

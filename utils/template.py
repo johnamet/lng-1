@@ -319,4 +319,39 @@ def create_lesson_notes_template(data=None, logo_path='./assets/images/MostarLog
         logger.error(f"Error saving document: {e}")
         raise
 
- 
+
+if __name__ == "__main__":
+    example_data = {
+    "WEEK_ENDING": "16th May, 2025",
+    "DAYS": "Monday - Friday",
+    "WEEK": "3",
+    "DURATION": "4 periods per class",
+    "SUBJECT": "Mathematics",
+    "STRAND": "Strand 3: Geometry and Measurement",
+    "SUBSTRAND": "Substrand 2: Angles and Polygons",
+    "CLASS": "Basic Eight",
+    "CLASS_SIZE": {"A": 28, "B": 28, "C": 28},
+    "CONTENT_STANDARD": ["B8.3.2.1: Demonstrate understanding of properties of polygons and solve related problems"],
+    "LEARNING_INDICATORS": ["B8.3.2.1.1: Identify and calculate interior and exterior angles of polygons"],
+    "PERFORMANCE_INDICATORS": [
+        "Calculate the sum of interior angles of various polygons.",
+        "Determine the measure of an exterior angle of a regular polygon.",
+        "Solve real-life problems involving angles in polygons."
+    ],
+    "TEACHING_LEARNING_RESOURCES": ["Charts showing different polygons", "Markers", "Whiteboard", "Protractor"],
+    "CORE_COMPETENCIES": ["Creativity", "Critical Thinking", "Collaboration"],
+    "KEY_WORDS": ["Polygon", "Interior Angle", "Exterior Angle", "Regular Polygon", "Irregular Polygon", "Sum of Angles", "Vertex"],
+    "R.P.K": "Learners have basic knowledge of triangles and quadrilaterals and can identify polygons with up to six sides.",
+    "PHASE_1": {
+        "STARTER": "Begin the lesson by asking students to name different shapes they see around them and classify them as polygons or non-polygons. Discuss what makes a shape a polygon and introduce the concept of angles in these shapes."
+    },
+    "PHASE_2": {
+        "MAIN": "The objective of this lesson is to understand and calculate the angles in various polygons, which are essential components in both mathematics and everyday life. We will explore both interior and exterior angles and apply these concepts to solve problems. \n\n1. **Lesson Objective:** By the end of the lesson, learners should be able to calculate the sum of interior angles and the measure of exterior angles in polygons. \n\n2. **Introduction:** Consider the Ghanaian Kente cloth, which often features geometric patterns. These patterns include various polygons, such as triangles, squares, and hexagons. Understanding the properties of these shapes helps in creating precise and beautiful designs. Similarly, the architecture of traditional Ghanaian buildings often incorporates polygonal shapes for aesthetic and structural purposes. \n\n3. **Step-by-Step Explanation:** \n   - **Interior Angles:** The sum of the interior angles of a polygon with \( n \) sides can be calculated using the formula: \n     \[ (n - 2) \times 180^\circ \] \n     For example, a pentagon (5 sides) has an interior angle sum of: \n     \[ (5 - 2) \times 180^\circ = 540^\circ \] \n   - **Exterior Angles:** The sum of the exterior angles of any polygon is always \( 360^\circ \). For a regular polygon, each exterior angle can be calculated by dividing \( 360^\circ \) by the number of sides \( n \): \n     \[ \text{Exterior Angle} = \frac{360^\circ}{n} \] \n     For a hexagon, each exterior angle is: \n     \[ \frac{360^\circ}{6} = 60^\circ \] \n\n4. **Guided Practice:** \n   - **Activity 1:** Use the protractor to measure angles of different polygons drawn on the whiteboard. Collaboratively calculate the interior angle sum for each shape. \n   - **Activity 2:** In groups, create and decorate a polygon cut-out (triangle, square, pentagon) and label each angle. Calculate both interior and exterior angles. \n\n5. **Independent Practice:** \n   - Problem 1: Calculate the sum of interior angles of a nonagon (9 sides). \n   - Problem 2: Determine the measure of one interior angle of a regular octagon. \n   - Problem 3: A polygon has an exterior angle of \( 45^\circ \). How many sides does this polygon have?"
+    },
+    "PHASE_3": {
+        "REFLECTION": "Review the key concepts of interior and exterior angles in polygons. Ask students to share how they might use these calculations in real-life scenarios, such as designing patterns or constructing objects. Clarify any mistakes and emphasize the importance of accuracy in calculations. Discuss how understanding these concepts can aid in solving more complex geometrical problems."
+    },
+    "ASSESSMENTS": "Observe learners as they engage in activities, ensuring they collaborate effectively and understand the concepts. Provide immediate feedback and address any misconceptions during the lesson. Use a short quiz at the end to assess their understanding of interior and exterior angles in polygons.",
+    "HOMEWORK": "Complete the following problems: 1) Calculate the sum of the interior angles of a decagon (10 sides). 2) If each exterior angle of a regular polygon is \( 30^\circ \), how many sides does the polygon have? Ensure to show all your workings."
+}
+    create_lesson_notes_template(example_data)

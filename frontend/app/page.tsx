@@ -129,7 +129,7 @@ export default function Home() {
         days: formData.days,
         week: formData.week,
         phone_number: formData.phone_number,
-        user_email: formData.email, // Changed to user_email to match backend
+        email: formData.email, // Changed to user_email to match backend
         custom_instructions: formData.custom_instructions,
       })
 

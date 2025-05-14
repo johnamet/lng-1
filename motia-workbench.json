@@ -25,8 +25,8 @@
       "y": 236.87485962203846
     },
     "steps/notes_docx_gen.step.py": {
-      "x": 220,
-      "y": 548
+      "x": 106,
+      "y": 380.00000000000006
     },
     "steps/whatsapp_notifier.step.py": {
       "x": -173.25,
@@ -47,6 +47,10 @@
     "steps/email_notifier.step.py": {
       "x": 279.5,
       "y": 902
+    },
+    "steps/telegram.step.py": {
+      "x": 412.75,
+      "y": 608
     }
   },
   "openai": {

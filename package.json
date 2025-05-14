@@ -3,7 +3,7 @@
   "description": "",
   "scripts": {
     "postinstall": "motia install",
-    "dev": "motia dev",
+    "dev": "nodemon --exec 'motia dev'",
     "dev:debug": "motia dev --debug",
     "clean": "rm -rf dist node_modules python_modules .motia .mermaid"
   },
